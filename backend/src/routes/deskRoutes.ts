@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { getAllDesks } from "../controllers/deskControllers";
+import { getAllDesks, createBooking } from "../controllers/deskControllers";
 
 const router = Router();
 
 router.get("/", getAllDesks);
+router.post("/booking", createBooking)
 
 export default router;
