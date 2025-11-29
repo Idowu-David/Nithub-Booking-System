@@ -27,7 +27,7 @@ app.post("/users", async (req: Request, res: Response) => {
     const hashedPassword = await bcryptjs.hash(password, 10);
     const newId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
 
-    const newUser: User = {
+    const newUser: UserInfo = {
         id: newId,
         userName,
         email,
