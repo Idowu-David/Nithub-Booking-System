@@ -14,11 +14,20 @@ export const createBooking = async (req: Request, res: Response) => {
 			SELECT * FROM bookings
 			WHERE user_id = $1
 			AND status = 'CONFIRMED'
+			AND (
+				booking_date > CURRENT_DATE
+				OR
+				(booking_date = CURRENT_DATE AND end_time > CURRENT_TIME)
+				)
 		`;
     const activeSpace = await db.query(activeQuery, [1]); // i will insert real user id
     if (activeSpace.rows.length > 0) {
-      return res.status(403).json({
-        message: "User cannot book another space yet",
+			return res.status(403).json({
+        success: false,
+        message:
+					"You already have an active or upcoming booking. Please cancel or checkout first.",
+				active_booking: activeSpace.rows[0]
+				
       });
     }
 
