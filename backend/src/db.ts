@@ -1,7 +1,19 @@
 import { Pool } from "pg";
 import dotenv from "dotenv";
+import { Sequelize } from "sequelize";
 
 dotenv.config();
+
+const DATABASE = String(process.env.DB_NAME);
+const USERNAME = String(process.env.DB_USER);
+const PASSWORD = String(process.env.DB_PASSWORD);
+const HOST = String(process.env.DB_HOST);
+
+const sequelize = new Sequelize(DATABASE, USERNAME, PASSWORD, {
+  host: HOST,
+  dialect: "postgres",
+});
+
 
 const pool = new Pool({
   user: process.env.DB_USER,
