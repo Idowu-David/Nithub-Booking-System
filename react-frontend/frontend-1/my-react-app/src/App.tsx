@@ -1,17 +1,17 @@
 
 
-const App = () => {
-  return (
-    <div>
-      <h1 className="text-3xl font-bold">
-        Hey There!
-      </h1>
+// const App = () => {
+//   return (
+//     <div>
+//       <h1 className="text-3xl font-bold">
+//         Hey There!
+//       </h1>
       
-    </div>
-  )
-}
+//     </div>
+//   )
+// }
 
-export default App
+// export default App
 
 
 // Okay, so, we'll use this page for the landing page.
