@@ -1,27 +1,50 @@
+import Link from 'next/link'
+
 const App = () => {
   return (
-    <div>
-      <h1 className="text-3xl font-bold">
-        Hey There!
-      </h1>
-      
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="text-center space-y-8">
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
+          Welcome to <span className="text-indigo-600">NitHub</span>
+        </h1>
+        <p className="text-xl text-gray-600">
+          What would you like to do today?
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mt-8">
+          <Link 
+            href="/login"
+            className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-md w-full sm:w-auto text-center"
+          >
+            Login
+          </Link>
+          <Link 
+            href="/signup"
+            className="px-8 py-3 bg-white text-indigo-600 border-2 border-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition-colors shadow-md w-full sm:w-auto text-center"
+          >
+            Sign Up
+          </Link>
+        </div>
+
+        <div className="pt-8 border-t border-gray-300 mt-12">
+          <p className="text-sm text-gray-500 mb-4">Quick Access</p>
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+            <Link href="/dashboards/user"
+              className="px-6 py-2 text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+            >
+              Go to User Dashboard →
+            </Link>
+            <Link 
+              href="/dashboards/admin"
+              className="px-6 py-2 text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+            >
+              Go to Admin Dashboard →
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
 export default App
-
-
-// Okay, so, we'll use this page for the landing page.
-// In the src folder, you'll find the pages folder, and in the pages folder, you find the different pages files, like BookingPage.tsx, HomePage.tsx, LoginPage.tsx, SignupPage.tsx, etc.
-// You'll also find a components folder, where you can create reusable components like headers, footers, navbars, etc.
-// For now, just focus on getting the landing page set up here in App.tsx.
-// We'll be using React Router for navigation, so make sure to import Routes and Route from "react-router-dom" then set up routes for different pages as needed.
-// Let's all try to do our parts and then we can integrate them later.
-// So, about creating branches, yes, each of us should create our own branch from the main branch for the features we're working on.
-// For example, if you're working on the login page, create a branch named "login-page" from the main branch. This way, we can work independently without conflicts.
-// When you want to push your changes, make sure you're on your feature branch and then push to that branch.
-// Once your feature is complete and tested, you can create a pull request to merge your branch back into main.
-// This approach helps keep our work organized and makes collaboration easier.
-// As for the fonts, we'll be making use of Quicksand. It's a clean font. I've imported it in the index.html file using Google Fonts. You can apply it to your components using Tailwind CSS classes or custom CSS as needed.
-// Let's try to build the UI components first, and then we can integrate the authentication logic later.
