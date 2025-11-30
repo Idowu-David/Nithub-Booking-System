@@ -1,6 +1,5 @@
-// src/components/BookingModal.tsx
 import React, { useState } from 'react';
-import { Desk, BookingFormData, BookingType } from '../index'; 
+import { Desk, BookingFormData, BookingType } from '../types'; 
 
 interface BookingModalProps {
   desk: Desk | null;
@@ -32,7 +31,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ desk, isOpen, onClose, onSu
     setTimeout(() => {
         onSubmit(formData);
         setIsSubmitting(false);
-        onClose(); 
     }, 1500); 
   };
   
@@ -42,22 +40,26 @@ const BookingModal: React.FC<BookingModalProps> = ({ desk, isOpen, onClose, onSu
     { value: 'full-day', label: 'Full Day (8 hrs)' },
   ];
 
+  // Dark Glassmorphism Input Style
+  const inputClasses = "mt-1 block w-full rounded-lg bg-gray-800/70 text-white border border-white/10 shadow-inner p-3 focus:ring-indigo-400 focus:border-indigo-400 sm:text-sm transition-all";
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-        <div className="p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Book Desk {desk.name}</h3>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-gray-900/80 backdrop-blur-xl rounded-xl shadow-2xl border border-indigo-500/20 w-full max-w-md">
+        <div className="p-8">
+          <h3 className="text-2xl font-bold text-white mb-2">Book Desk {desk.name}</h3>
+          <p className="text-indigo-300 mb-6">{desk.location}</p>
           
           {isSubmitting ? (
-            <div className="py-8 flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3"></div>
-              <p className="text-md text-gray-600">Reserving Your Spot...</p>
+            <div className="py-12 flex flex-col items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-400 mb-4"></div>
+              <p className="text-lg text-indigo-200">Processing Payment & Reservation...</p>
             </div>
           ) : (
-            <form onSubmit={handleConfirm} className="space-y-4">
+            <form onSubmit={handleConfirm} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Date</label>
+                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-300">Date</label>
                   <input
                     type="date"
                     name="startDate"
@@ -66,11 +68,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ desk, isOpen, onClose, onSu
                     onChange={handleChange}
                     min={new Date().toISOString().slice(0, 10)}
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                    className={inputClasses}
                   />
                 </div>
                 <div>
-                  <label htmlFor="startTime" className="block text-sm font-medium text-gray-700">Start Time</label>
+                  <label htmlFor="startTime" className="block text-sm font-medium text-gray-300">Start Time</label>
                   <input
                     type="time"
                     name="startTime"
@@ -78,20 +80,20 @@ const BookingModal: React.FC<BookingModalProps> = ({ desk, isOpen, onClose, onSu
                     value={formData.startTime}
                     onChange={handleChange}
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                    className={inputClasses}
                   />
                 </div>
               </div>
               
               <div>
-                <label htmlFor="bookingType" className="block text-sm font-medium text-gray-700">Duration</label>
+                <label htmlFor="bookingType" className="block text-sm font-medium text-gray-300">Duration</label>
                 <select
                   name="bookingType"
                   id="bookingType"
                   value={formData.bookingType}
                   onChange={handleChange}
                   required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                  className={inputClasses}
                 >
                   {bookingTypes.map(type => (
                     <option key={type.value} value={type.value}>{type.label}</option>
@@ -100,15 +102,15 @@ const BookingModal: React.FC<BookingModalProps> = ({ desk, isOpen, onClose, onSu
               </div>
 
               <div>
-                <label htmlFor="purpose" className="block text-sm font-medium text-gray-700">Purpose</label>
+                <label htmlFor="purpose" className="block text-sm font-medium text-gray-300">Purpose (Optional)</label>
                 <textarea
                   name="purpose"
                   id="purpose"
                   rows={2}
                   value={formData.purpose}
                   onChange={handleChange}
-                  placeholder="e.g., Deep focus work"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                  placeholder="e.g., Deep focus work or team meeting"
+                  className={inputClasses}
                 />
               </div>
 
@@ -116,15 +118,15 @@ const BookingModal: React.FC<BookingModalProps> = ({ desk, isOpen, onClose, onSu
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  className="px-6 py-3 text-sm font-medium text-gray-300 bg-white/10 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                  className="px-6 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/50 hover:bg-indigo-700 transition-colors"
                 >
-                  Confirm Booking
+                  Confirm Booking ({desk.price.split('/')[0]})
                 </button>
               </div>
             </form>
