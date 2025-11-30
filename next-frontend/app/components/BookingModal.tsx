@@ -1,136 +1,139 @@
-'use client'
-import React from 'react'
-import { Desk } from '../index'
+// src/components/BookingModal.tsx
+import React, { useState } from 'react';
+import { Desk, BookingFormData, BookingType } from '../index'; 
 
 interface BookingModalProps {
-  desk: Desk | null
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  desk: Desk | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (formData: BookingFormData) => void;
 }
 
 const BookingModal: React.FC<BookingModalProps> = ({ desk, isOpen, onClose, onSubmit }) => {
-  if (!isOpen || !desk) return null
+  const [formData, setFormData] = useState<BookingFormData>({
+    startDate: new Date().toISOString().slice(0, 10), 
+    startTime: '09:00',
+    bookingType: 'full-day',
+    purpose: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!isOpen || !desk) return null;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleConfirm = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    setTimeout(() => {
+        onSubmit(formData);
+        setIsSubmitting(false);
+        onClose(); 
+    }, 1500); 
+  };
+  
+  const bookingTypes: { value: BookingType, label: string }[] = [
+    { value: 'hourly', label: '1 Hour' },
+    { value: 'half-day', label: 'Half Day (4 hrs)' },
+    { value: 'full-day', label: 'Full Day (8 hrs)' },
+  ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
         <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-gray-800">Book {desk.name}</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl"
-              type="button"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="bg-indigo-50 p-4 rounded-lg mb-6">
-            <p className="text-sm text-gray-700 mb-1"><strong>Location:</strong> {desk.location}</p>
-            <p className="text-sm text-gray-700"><strong>Price:</strong> {desk.price}</p>
-          </div>
-
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="booking-type" className="block text-sm font-medium text-gray-700 mb-2">
-                Booking Type
-              </label>
-              <select 
-                id="booking-type"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              >
-                <option value="">Select booking type</option>
-                <option value="hourly">Hourly (₦200/hour)</option>
-                <option value="half-day">Half Day (₦800)</option>
-                <option value="full-day">Full Day (₦1,500)</option>
-                <option value="weekly">Weekly Pass (₦7,000)</option>
-                <option value="monthly">Monthly Pass (₦25,000)</option>
-              </select>
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Book Desk {desk.name}</h3>
+          
+          {isSubmitting ? (
+            <div className="py-8 flex flex-col items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3"></div>
+              <p className="text-md text-gray-600">Reserving Your Spot...</p>
             </div>
-
-            <div>
-              <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date
-              </label>
-              <input
-                id="start-date"
-                type="date"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+          ) : (
+            <form onSubmit={handleConfirm} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Date</label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    id="startDate"
+                    value={formData.startDate}
+                    onChange={handleChange}
+                    min={new Date().toISOString().slice(0, 10)}
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="startTime" className="block text-sm font-medium text-gray-700">Start Time</label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    id="startTime"
+                    value={formData.startTime}
+                    onChange={handleChange}
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                  />
+                </div>
+              </div>
+              
               <div>
-                <label htmlFor="start-time" className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Time
-                </label>
-                <input
-                  id="start-time"
-                  type="time"
+                <label htmlFor="bookingType" className="block text-sm font-medium text-gray-700">Duration</label>
+                <select
+                  name="bookingType"
+                  id="bookingType"
+                  value={formData.bookingType}
+                  onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                >
+                  {bookingTypes.map(type => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="purpose" className="block text-sm font-medium text-gray-700">Purpose</label>
+                <textarea
+                  name="purpose"
+                  id="purpose"
+                  rows={2}
+                  value={formData.purpose}
+                  onChange={handleChange}
+                  placeholder="e.g., Deep focus work"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
                 />
               </div>
-              <div>
-                <label htmlFor="end-time" className="block text-sm font-medium text-gray-700 mb-2">
-                  End Time
-                </label>
-                <input
-                  id="end-time"
-                  type="time"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                />
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                >
+                  Confirm Booking
+                </button>
               </div>
-            </div>
+            </form>
+          )}
 
-            <div>
-              <label htmlFor="purpose" className="block text-sm font-medium text-gray-700 mb-2">
-                Purpose (Optional)
-              </label>
-              <textarea
-                id="purpose"
-                rows={3}
-                placeholder="What will you be working on?"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
-              ></textarea>
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  required
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">I agree to the terms and conditions</span>
-              </label>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-              >
-                Confirm Booking
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default BookingModal
+export default BookingModal;
