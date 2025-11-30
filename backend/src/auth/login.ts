@@ -1,154 +1,160 @@
-import express, { Request, Response } from "express";
-import bcryptjs from "bcryptjs";
+import express, { Request, Response, NextFunction } from "express";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = 5000;
 
-// 🔒 CRITICAL: A secret key used to sign the JWTs. 
-// In a real application, this MUST be stored in an environment variable!
-const JWT_SECRET = "YOUR_SUPER_SECURE_SECRET_KEY_123"; 
+// Use environment variable in real app!
+const JWT_SECRET = "secret";
 
-interface UserInfo { 
-    id: number;
-    userName: string;
-    email: string;
-    password: string; 
+// In-memory users (you’ll replace with PostgreSQL later)
+interface User {
+  id: number;
+  fullname: string;
+  email: string;
+  phone: string;
+  password: string;
 }
 
-interface UserPayload {
-    id: number;
-    userName: string;
-}
+const users: User[] = [];
 
+// Middleware
+app.use(express.json());
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Your Next.js frontend
+    credentials: true, // Allow cookies
+  })
+);
+
+// Type for protected routes
 interface AuthRequest extends Request {
-    user?: UserPayload;
+  user?: { id: number; fullname: string };
 }
-const users: UserInfo[] = []; 
 
-app.use(express.json()); 
+// JWT Middleware - reads from httpOnly cookie
+const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const token = req.cookies.token;
 
-// --- JWT Verification Middleware ---
-const verifyToken = (req: AuthRequest, res: Response, next: express.NextFunction) => {
-    // 1. Check for the token in the Authorization header
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Get the token part: Bearer <token>
+  if (!token) {
+    return res.status(403).json({ message: "No token provided" });
+  }
 
-    if (!token) {
-        return res.status(403).send({ message: "Access denied. No token provided." });
-    }
-
-    try {
-        // 2. Verify the token using the secret key
-        const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-        
-        // 3. Attach the decoded user data to the request object
-        req.user = decoded; 
-        
-        // 4. Continue to the next middleware or route handler
-        next();
-    } catch (error) {
-        // If verification fails (e.g., token is expired or invalid signature)
-        return res.status(401).send({ message: "Invalid or expired token." });
-    }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number; fullname: string };
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
 };
 
-// 📝 Registration Route
-app.post("/users", async (req: Request, res: Response) => {
-    const { userName, email, password } = req.body;
-    
-    if (!userName || !email || !password) {
-        return res.status(400).send({ message: "Missing required fields: userName, email, and password." });
-    }
-    
-    if (users.find(u => u.email === email)) {
-        return res.status(409).send({ message: "User with this email already exists." });
-    }
+// REGISTER (matches your frontend)
+app.post("/api/auth/register", async (req: Request, res: Response) => {
+  const { fullname, email, phone, password } = req.body;
 
-    try {
-        const hashedPassword = await bcryptjs.hash(password, 10);
-        const newId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
+  if (!fullname || !email || !phone || !password) {
+    return res.status(400).json({ message: "All fields required" });
+  }
 
-        const newUser: UserInfo = {
-            id: newId,
-            userName,
-            email,
-            password: hashedPassword,
-        };
-        
-        users.push(newUser);
-        
-        const { password: _, ...userResponse } = newUser;
-        res.status(201).send(userResponse);
-    } catch (error) {
-        console.error("Error during user registration:", error);
-        res.status(500).send({ message: "An internal server error occurred during registration." });
-    }
+  if (users.find(u => u.email === email.toLowerCase())) {
+    return res.status(409).json({ message: "User already exists" });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const newUser: User = {
+    id: users.length + 1,
+    fullname,
+    email: email.toLowerCase(),
+    phone,
+    password: hashedPassword,
+  };
+
+  users.push(newUser);
+
+  const token = jwt.sign(
+    { id: newUser.id, fullname: newUser.fullname },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  // Set secure httpOnly cookie
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: false, // Set true in production with HTTPS
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  const { password: _, ...userWithoutPass } = newUser;
+  res.status(201).json({ message: "Registered!", user: userWithoutPass });
 });
 
-app.post("/login", async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+// LOGIN - THIS IS WHAT YOUR FRONTEND USES
+app.post("/api/auth/login", async (req: Request, res: Response) => {
+  const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).send({ message: "Email and password are required." });
-    }
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password required" });
+  }
 
-    const user = users.find(u => u.email === email);
-    if (!user) {
-        return res.status(401).send({ message: "Invalid credentials." });
-    }
+  const user = users.find(u => u.email === email.toLowerCase());
+  if (!user) {
+    return res.status(401).json({ message: "Invalid email or password" });
+  }
 
-    try {
-        const isMatch = await bcryptjs.compare(password, user.password);
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ message: "Invalid email or password" });
+  }
 
-        if (isMatch) {
-            // Define the JWT payload (data to store in the token)
-            const payload: UserPayload = { 
-                id: user.id, 
-                userName: user.userName 
-            };
-            
-            // Generate the token
-            const token = jwt.sign(
-                payload, 
-                JWT_SECRET, 
-                { expiresIn: '1h' } // Token expires in 1 hour
-            );
-            
-            // Login Successful: Send the token back to the client
-            const { password: _, ...userResponse } = user;
-            return res.status(200).send({ 
-                message: "Login successful!", 
-                user: userResponse,
-                token: token // Client stores this token
-            });
-        } else {
-            return res.status(401).send({ message: "Invalid credentials." });
-        }
-    } catch (error) {
-        console.error("Error comparing passwords:", error);
-        return res.status(500).send({ message: "An internal server error occurred." });
-    }
+  // Create token
+  const token = jwt.sign(
+    { id: user.id, fullname: user.fullname },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  // Set httpOnly cookie (frontend doesn't see token - super secure)
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: false, // true in production
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  const { password: _, ...safeUser } = user;
+  return res.json({
+    message: "Login successful!",
+    user: safeUser,
+  });
 });
 
-// 🛡️ Protected Route (Requires a Valid JWT)
-app.get("/dashboard", verifyToken, (req: AuthRequest, res: Response) => {
-    // This route handler only executes if verifyToken successfully passed.
-    
-    if (req.user) {
-        res.status(200).send({
-            message: `Welcome to the dashboard, ${req.user.userName}!`,
-            data: { 
-                userId: req.user.id,
-                // // Example of protected data accessed after verification
-                // protectedResource: "Here is your protected data using the valid JWT."
-            }
-        });
-    } else {
-        res.status(500).send({ message: "User data missing from request after verification." });
-    }
+// Get current user (for dashboard)
+app.get("/api/auth/me", verifyToken, (req: AuthRequest, res: Response) => {
+  const user = users.find(u => u.id === req.user?.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  const { password: _, ...safeUser } = user;
+  res.json(safeUser);
+});
+
+// Logout
+app.post("/api/auth/logout", (req: Request, res: Response) => {
+  res.clearCookie("token");
+  res.json({ message: "Logged out" });
+});
+
+// Protected route example
+app.get("/api/dashboard", verifyToken, (req: AuthRequest, res: Response) => {
+  res.json({ message: `Welcome back, ${req.user?.fullname}!` });
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Login → POST http://localhost:${PORT}/api/auth/login`);
 });
