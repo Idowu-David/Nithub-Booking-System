@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import db from "../db";
 
 export const getAllDesks = async (req: Request, res: Response) => {
-  const { date, start, end } = req.query;
+	const { date, start, end, duration } = req.query;
+	console.log("REQUEST: ", req.query)
 
   try {
     const allDesks = await db.query(
@@ -23,7 +24,7 @@ export const getAllDesks = async (req: Request, res: Response) => {
 		FROM bookings
 		WHERE booking_date = $1
 		AND status = 'CONFIRMED'
-		AND (start_time <= $3 AND end_time > $2)
+		AND (start_time < $3 AND end_time > $2)
 	`;
 
     const conflicts = await db.query(conflictQuery, [date, start, end]);
