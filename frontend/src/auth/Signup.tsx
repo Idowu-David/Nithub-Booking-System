@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Mail, Lock, Phone, Check, CheckCircle } from "lucide-react";
+import { User, Mail, Lock, Check, CheckCircle } from "lucide-react";
 import axios from "axios";
 
 // Define the shape of the user input data

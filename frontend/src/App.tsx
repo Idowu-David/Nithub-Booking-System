@@ -1,4 +1,3 @@
-import React from 'react'
 import Dashboard from './layouts/Dashboard'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Signup from './auth/Signup';

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,7 +11,6 @@ import {
   Clock,
   CheckCircle,
   Sparkles,
-  ShoppingBag,
   Loader2,
   MonitorCheck,
   X,

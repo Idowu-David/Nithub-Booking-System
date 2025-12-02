@@ -3,16 +3,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
-  Clock,
   MapPin,
   LogOut,
   MonitorCheck,
   Zap,
   Loader2,
-  CheckCircle,
   Wifi,
   Calendar,
-  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
