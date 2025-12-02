@@ -32,13 +32,13 @@ const HomePage: React.FC = () => {
           <p className="text-sm text-gray-500 mb-4">Quick Access</p>
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
             <Link
-              to="/dashboards/user"
+              to="/dashboard/user"
               className="px-6 py-2 text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
             >
               Go to User Dashboard →
             </Link>
             <Link
-              to="/dashboards/admin"
+              to="/dashboard/admin"
               className="px-6 py-2 text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
             >
               Go to Admin Dashboard →

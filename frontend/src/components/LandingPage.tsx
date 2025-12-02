@@ -36,7 +36,7 @@ const LandingPage = () => {
               Go to User Dashboard →
             </Link>
             <Link
-              to="/dashboards/admin"
+              to="/dashboard/admin"
               className="px-6 py-2 text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
             >
               Go to Admin Dashboard →

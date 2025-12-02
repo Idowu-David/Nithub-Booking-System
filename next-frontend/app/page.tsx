@@ -29,13 +29,13 @@ const App = () => {
         <div className="pt-8 border-t border-gray-300 mt-12">
           <p className="text-sm text-gray-500 mb-4">Quick Access</p>
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-            <Link href="/dashboards/user"
+            <Link href="/dashboard/user"
               className="px-6 py-2 text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
             >
               Go to User Dashboard →
             </Link>
             <Link 
-              href="/dashboards/admin"
+              href="/dashboard/admin"
               className="px-6 py-2 text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
             >
               Go to Admin Dashboard →

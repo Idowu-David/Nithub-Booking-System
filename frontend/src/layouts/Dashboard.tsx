@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,9 +11,11 @@ import {
   Clock,
   CheckCircle,
   Sparkles,
+  ShoppingBag,
   Loader2,
   MonitorCheck,
   X,
+  LayoutDashboard,
 } from "lucide-react";
 
 // --- CONFIGURATION ---
@@ -44,7 +46,7 @@ interface Desk {
   available: boolean;
 }
 
-// Time Slots for Dropdown/Grid
+// Time Slots
 const TIME_SLOTS = [
   "09:00",
   "09:30",
@@ -184,7 +186,7 @@ const BookingDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
-  const [selectedTime, setSelectedTime] = useState<string>(""); // Default empty to force selection
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const [desks, setDesks] = useState<Desk[]>([]);
 
   // Modal State
@@ -204,16 +206,7 @@ const BookingDashboard = () => {
       setLoading(true);
       setFetchError(null);
 
-      // Calculate End Time based on Start Time + Duration
-      // Note: The backend does this too, but for the "Availability Range" check,
-      // we need to tell the backend "I need a slot from X to Y".
-      // Or, simpler: Send 'start_time' and 'duration', and let backend handle logic.
-      // Assuming backend endpoint /desks accepts ?start=...&duration=...
-      // If backend expects 'end', we can calculate simple window or let backend assume.
-      // Using 5:00 PM as default end of day is safer for "general view",
-      // BUT since we selected a specific time, let's look for conflicts in that specific window.
-
-      // Parse Start Time
+      // Calculate End Time logic
       const [h, m] = time.split(":").map(Number);
       const startMins = h * 60 + m;
       const endMins = startMins + durationMins;
@@ -234,19 +227,18 @@ const BookingDashboard = () => {
         const response = await axios.get<Desk[]>(queryUrl, {
           params: {
             date: date,
-            start: time, // User selected start time
-            end: endTime, // Calculated end time
+            start: time,
+            end: endTime,
             duration: durationMins,
           },
         });
 
         setDesks(response.data);
-      } catch (e) {
-        const error = e as any;
-        console.error("Desk Fetch Error:", error);
+      } catch (e: any) {
+        console.error("Desk Fetch Error:", e);
 
-        const errorMessage = error.response?.status
-          ? `Server returned status ${error.response.status}.`
+        const errorMessage = e.response?.status
+          ? `Server returned status ${e.response.status}.`
           : "Failed to connect to the backend.";
 
         setFetchError(errorMessage);
@@ -259,7 +251,6 @@ const BookingDashboard = () => {
   );
 
   // --- AUTO-FETCH TRIGGER ---
-  // Whenever Date, Time, or Package changes (in Step 2), re-fetch desks.
   useEffect(() => {
     if (step === 2 && selectedTime && bookingData.mins > 0) {
       fetchAvailableDesks(selectedDate, selectedTime, bookingData.mins);
@@ -270,7 +261,6 @@ const BookingDashboard = () => {
   const handleStepTwoStart = () => {
     if (bookingData.mins > 0) {
       setStep(2);
-      // We don't fetch yet because user hasn't picked a time
     }
   };
 
@@ -290,10 +280,22 @@ const BookingDashboard = () => {
     navigate("/dashboard/user");
   };
 
+  // --- UPDATED CONFIRM BOOKING HANDLER ---
   const handleConfirmBooking = async () => {
     if (!selectedTime || !selectedDesk) return;
 
+    // 1. Get User ID from Local Storage (Ensure you saved this during Login!)
+		const userId = localStorage.getItem("user_id");		
+		console.log("USERID:", userId)
+
+    if (!userId) {
+      alert("You must be logged in to book a desk.");
+      navigate("/login");
+      return;
+    }
+
     const bookingPayload = {
+      user_id: userId,
       desk_id: selectedDesk.id,
       date: selectedDate,
       start_time: selectedTime,
@@ -301,16 +303,25 @@ const BookingDashboard = () => {
       price: bookingData.price,
     };
 
+    console.log("Booking Payload Sent to Backend:", bookingPayload);
+
     try {
+      // 2. SEND THE REQUEST TO YOUR BACKEND
+      // This hits the createBooking controller you wrote
       await axios.post(`${API_BASE_URL}/desks/booking`, bookingPayload);
 
+      // 3. IF SUCCESSFUL:
       closeModal();
       setShowSuccessModal(true);
-      // Refresh grid
+
+      // Refresh grid so this desk turns RED immediately
       fetchAvailableDesks(selectedDate, selectedTime, bookingData.mins);
-    } catch (e) {
-      const error = e as any;
-      const errorMessage = error.response?.data?.error || "Booking failed.";
+    } catch (e: any) {
+      console.error("Booking Failed:", e);
+      const errorMessage =
+        e.response?.data?.message ||
+        e.response?.data?.error ||
+        "Booking failed.";
       alert(`Booking Failed: ${errorMessage}`);
     }
   };
@@ -318,7 +329,7 @@ const BookingDashboard = () => {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 p-4 md:p-8">
       {/* HEADER */}
-      <div className="max-w-6xl mx-auto mb-10 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto mb-10 flex flex-col md:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold flex items-center gap-3 text-slate-900">
             <div className="bg-blue-600 p-2 rounded-lg text-white">
@@ -328,28 +339,39 @@ const BookingDashboard = () => {
           </h1>
         </div>
 
-        {/* SUMMARY */}
-        {bookingData.mins > 0 && (
-          <div className="bg-white px-6 py-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-6">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Time
-              </p>
-              <p className="text-lg font-bold leading-none">
-                {formatTime(bookingData.mins)}
-              </p>
+        <div className="flex items-center gap-4">
+          {/* LIVE SUMMARY WIDGET */}
+          {bookingData.mins > 0 && (
+            <div className="bg-white px-6 py-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-6 animate-in slide-in-from-top-4 transition-all">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Total Time
+                </p>
+                <p className="text-lg font-bold leading-none">
+                  {formatTime(bookingData.mins)}
+                </p>
+              </div>
+              <div className="w-px h-8 bg-slate-100"></div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Total Price
+                </p>
+                <p className="text-lg font-bold text-green-600 leading-none">
+                  ₦{bookingData.price.toLocaleString()}
+                </p>
+              </div>
             </div>
-            <div className="w-px h-8 bg-slate-100"></div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Price
-              </p>
-              <p className="text-lg font-bold text-green-600 leading-none">
-                ₦{bookingData.price.toLocaleString()}
-              </p>
-            </div>
-          </div>
-        )}
+          )}
+
+          {/* MY DASHBOARD BUTTON (Navigation Link) */}
+          <button
+            onClick={handleGoToDashboard}
+            className="px-5 py-3 bg-white text-slate-600 font-bold rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 hover:text-blue-600 transition-colors flex items-center gap-2"
+          >
+            <LayoutDashboard size={18} />
+            My Dashboard
+          </button>
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto">
@@ -582,7 +604,8 @@ const BookingDashboard = () => {
               Booking Confirmed!
             </h3>
             <p className="text-slate-500 mb-6">
-              See you at {selectedTime} on {selectedDate}.
+              Your session for {formatTime(bookingData.mins)} at{" "}
+              {selectedDesk?.label} is secured.
             </p>
             <button
               onClick={handleGoToDashboard}

@@ -2,47 +2,17 @@ import express, { Router, Request, Response } from "express";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../db";
+import { use } from "react";
 
 const JWT_SECRET = String(process.env.JWT_SECRET);
 const router = Router();
-// // --- JWT Verification Middleware ---
-// const verifyToken = (
-//   req: AuthRequest,
-//   res: Response,
-//   next: express.NextFunction
-// ) => {
-//   // 1. Check for the token in the Authorization header
-//   const authHeader = req.headers["authorization"];
-//   const token = authHeader && authHeader.split(" ")[1]; // Get the token part: Bearer <token>
 
-//   if (!token) {
-//     return res
-//       .status(403)
-//       .send({ message: "Access denied. No token provided." });
-//   }
-
-//   try {
-//     // 2. Verify the token using the secret key
-//     const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-
-//     // 3. Attach the decoded user data to the request object
-//     req.user = decoded;
-
-//     // 4. Continue to the next middleware or route handler
-//     next();
-//   } catch (error) {
-//     // If verification fails (e.g., token is expired or invalid signature)
-//     return res.status(401).send({ message: "Invalid or expired token." });
-//   }
-// };
-
-// 📝 Registration Route
 router.post("/signup", async (req: Request, res: Response) => {
-  const { userName, email, password } = req.body;
+  const { username, email, password } = req.body;
 
-  if (!userName || !email || !password) {
+  if (!username || !email || !password) {
     return res.status(400).send({
-      message: "Missing required fields: userName, email, and password.",
+      message: "Missing required fields: username, email, and password.",
     });
   }
 
@@ -59,7 +29,7 @@ router.post("/signup", async (req: Request, res: Response) => {
     const result = await db.query(
       `INSERT INTO users (name, email, password_hash)
 			VALUES ($1, $2, $3) RETURNING *`,
-      [userName, email, hashedPassword]
+      [username, email, hashedPassword]
     );
 
     const newUser = result.rows[0];
@@ -85,7 +55,7 @@ router.post("/signup", async (req: Request, res: Response) => {
 router.post("/login", async (req: Request, res: Response) => {
 	const { email, password } = req.body;
 	
-	console.log(req.body)
+	console.log("LOGIN", req.body)
 
   if (!email || !password) {
     return res
@@ -107,8 +77,8 @@ router.post("/login", async (req: Request, res: Response) => {
     const userData = user.rows[0];
     const userEmail = userData.email;
     const userPassword = userData.password_hash;
-    const userName = userData.username;
-    const userId = userData.id;
+    const username = userData.name;
+		const userId = userData.id;
 
     const isMatch = await bcryptjs.compare(password, userPassword);
     if (!isMatch) {
@@ -125,7 +95,7 @@ router.post("/login", async (req: Request, res: Response) => {
     res.status(200).json({
       user: {
         id: userId,
-        username: userName,
+        username: username,
         email: userEmail,
       },
       token: token,
@@ -135,29 +105,5 @@ router.post("/login", async (req: Request, res: Response) => {
     res.status(500).json({ message: "SERVER ERROR" });
   }
 });
-
-// // 🛡️ Protected Route (Requires a Valid JWT)
-// app.get("/dashboard", verifyToken, (req: AuthRequest, res: Response) => {
-//   // This route handler only executes if verifyToken successfully passed.
-
-//   if (req.user) {
-//     res.status(200).send({
-//       message: `Welcome to the dashboard, ${req.user.userName}!`,
-//       data: {
-//         userId: req.user.id,
-//         // // Example of protected data accessed after verification
-//         // protectedResource: "Here is your protected data using the valid JWT."
-//       },
-//     });
-//   } else {
-//     res
-//       .status(500)
-//       .send({ message: "User data missing from request after verification." });
-//   }
-// });
-
-// app.listen(PORT, () => {
-//   console.log(`Server running on http://localhost:${PORT}`);
-// });
 
 export default router;

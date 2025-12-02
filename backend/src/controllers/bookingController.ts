@@ -2,7 +2,7 @@ import { Response, Request } from "express";
 import db from "../db";
 
 export const createBooking = async (req: Request, res: Response) => {
-  const { desk_id, date, start_time, duration } = req.body;
+  const { user_id, desk_id, date, start_time, duration } = req.body;
 
   try {
     const startMins = timeToMins(start_time);
@@ -10,24 +10,36 @@ export const createBooking = async (req: Request, res: Response) => {
     const end_time = minsToTime(endMins);
 
     // block user from booking another space while having an active one
-    const activeQuery = `
-			SELECT * FROM bookings
-			WHERE user_id = $1
-			AND status = 'CONFIRMED'
-			AND (
-				booking_date > CURRENT_DATE
-				OR
-				(booking_date = CURRENT_DATE AND end_time > CURRENT_TIME)
-				)
+    const now = new Date(); // Get current time in your backend
+    const currentDate = now.toISOString().split("T")[0]; // Format: 'YYYY-MM-DD'
+    const currentTime = now.toTimeString().split(" ")[0]; // Format: 'HH:MM:SS'
+
+    // 2. THE SQL QUERY
+    // "Does this user have ANY booking that has not finished yet?"
+    const activeBookingQuery = `
+		SELECT 1 FROM bookings
+		WHERE user_id = $1
+		AND status = 'CONFIRMED'
+		AND (
+				booking_date > $2
+				OR 
+				(booking_date = $2 AND end_time > $3)
+		)
+		LIMIT 1;
 		`;
-    const activeSpace = await db.query(activeQuery, [1]); // i will insert real user id
+
+    // Parameters: [User ID, Current Date, Current Time]
+    const activeSpace = await db.query(activeBookingQuery, [
+      user_id,
+      currentDate,
+      currentTime,
+		]);
     if (activeSpace.rows.length > 0) {
-			return res.status(403).json({
+      return res.status(403).json({
         success: false,
         message:
-					"You already have an active or upcoming booking. Please cancel or checkout first.",
-				active_booking: activeSpace.rows[0]
-				
+          "You already have an active or upcoming booking. Please cancel or checkout first.",
+        active_booking: activeSpace.rows[0],
       });
     }
 
@@ -60,7 +72,7 @@ export const createBooking = async (req: Request, res: Response) => {
 		`;
 
     const newBooking = await db.query(insertQuery, [
-      1,
+      user_id,
       desk_id,
       date,
       start_time,
@@ -81,14 +93,14 @@ export const createBooking = async (req: Request, res: Response) => {
 };
 
 export const bookingCheckout = async (req: Request, res: Response) => {
-  const { desk_id } = req.body;
+  const { user_id, desk_id } = req.body;
 
   const checkQuery = `
 		SELECT * FROM bookings
 		WHERE user_id = $1
 	`;
   try {
-    const check = await db.query(checkQuery, [1]);
+    const check = await db.query(checkQuery, [user_id]);
 
     if (check.rows.length === 0) {
       return res.json({
@@ -107,7 +119,7 @@ export const bookingCheckout = async (req: Request, res: Response) => {
 	`;
 
   try {
-    await db.query(toggleQuery, [desk_id, 1]);
+    await db.query(toggleQuery, [desk_id, user_id]);
     res.status(200).json({
       message: "User checked out of the space",
       desk_id: desk_id,

@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "login": "ts-node-dev --respawn --transpile-only  /home/umlat/Documents/Dev/Nithub-Booking-System/backend/src/auth/login.ts",
+    "login": "ts-node-dev --respawn --transpile-only",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
