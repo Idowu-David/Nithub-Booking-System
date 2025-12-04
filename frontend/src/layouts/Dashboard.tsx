@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 
 // --- CONFIGURATION ---
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 // --- TYPE DEFINITIONS ---
 type Package = {
@@ -64,6 +65,7 @@ const TIME_SLOTS = [
   "16:00",
   "16:30",
 ];
+
 
 const PACKAGES: Package[] = [
   { id: 1, label: "30 Mins", mins: 30, price: 500, popular: false },
