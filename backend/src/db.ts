@@ -27,7 +27,7 @@ pool.on("connect", () => {
   console.log("Database Connected Successfully");
 });
 
-pool.on("error", (err) => {
+pool.on("error", (err: Error) => {
   console.error("Unexpected Error on Idle Client", err);
   process.exit(-1);
 });
