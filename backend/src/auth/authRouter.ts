@@ -16,12 +16,6 @@ router.post("/signup", async (req: Request, res: Response) => {
     });
   }
 
-  // if (users.find((u) => u.email === email)) {
-  //   return res
-  //     .status(409)
-  //     .send({ message: "User with this email already exists." });
-  // }
-
   try {
     const hashedPassword = await bcryptjs.hash(password, 10);
     // const newId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
