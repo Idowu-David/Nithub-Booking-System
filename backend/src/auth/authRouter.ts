@@ -2,7 +2,6 @@ import express, { Router, Request, Response } from "express";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "../db";
-import { use } from "react";
 
 const JWT_SECRET = String(process.env.JWT_SECRET);
 const router = Router();
