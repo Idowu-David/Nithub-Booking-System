@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -10,22 +8,21 @@ import {
   Loader2,
   Wifi,
   Calendar,
+  LayoutDashboard, // Added LayoutDashboard for clarity in the header
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // --- CONFIGURATION ---
-// --- CONFIGURATION ---
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const API_BASE_URL = "http://localhost:5000/api";
 
 // --- TYPES ---
 interface ActiveBooking {
   id: number;
   desk_id: number;
-  desk_label: string; // Assuming the backend join returns this, or we map it
+  desk_label: string;
   start_time: string; // HH:MM:SS
   end_time: string; // HH:MM:SS
-  booking_date: string; // YYYY-MM-DD
+  booking_date: string; // YYYY-MM-MM
   package_duration_mins: number;
   status: "CONFIRMED" | "CHECKED_OUT" | "CANCELLED";
 }
@@ -56,26 +53,24 @@ const UserDashboard: React.FC = () => {
     const userId = localStorage.getItem("user_id");
 
     if (!userId) {
-      // If not logged in, redirect
       navigate("/login");
       return;
     }
 
     try {
       // Assuming you have a route GET /bookings/active/:user_id
-      // If you haven't built this route yet, this call will fail (404).
       const response = await axios.get(
         `${API_BASE_URL}/bookings/active/${userId}`
       );
 
       if (response.data) {
+        // Assume backend returns desk_label via a JOIN
         setActiveBooking(response.data);
       } else {
         setActiveBooking(null);
       }
     } catch (err: any) {
       console.error("Dashboard Fetch Error:", err);
-      // If 404, it just means no active booking, which is fine.
       if (err.response && err.response.status === 404) {
         setActiveBooking(null);
       } else {
@@ -94,7 +89,6 @@ const UserDashboard: React.FC = () => {
   useEffect(() => {
     if (!activeBooking) return;
 
-    // Combine date and time for precise calculation
     const targetTime = new Date(
       `${activeBooking.booking_date}T${activeBooking.end_time}`
     );
@@ -125,7 +119,7 @@ const UserDashboard: React.FC = () => {
   // --- 3. CHECKOUT HANDLER ---
   const handleCheckout = async () => {
     if (!activeBooking) return;
-    if (!window.confirm("Are you sure you want to end your session early?"))
+    if (!window.confirm(`Are you sure you want to end your session early?`))
       return;
 
     const userId = localStorage.getItem("user_id");
@@ -133,16 +127,14 @@ const UserDashboard: React.FC = () => {
 
     setIsCheckingOut(true);
     try {
-      // Using the controller logic you provided:
-      // body: { user_id, desk_id }
       const payload = {
         user_id: userId,
         desk_id: activeBooking.desk_id,
       };
 
+      // Assuming route is POST /api/bookings/checkout
       await axios.post(`${API_BASE_URL}/bookings/checkout`, payload);
 
-      // Clear state immediately upon success
       setActiveBooking(null);
       setTimeLeft(null);
       alert("Checked out successfully!");
@@ -175,15 +167,18 @@ const UserDashboard: React.FC = () => {
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900">
-              User Dashboard
+              My Dashboard
             </h1>
             <p className="text-slate-500">Welcome back.</p>
           </div>
+
+          {/* USER NAVIGATION BUTTON (The required link) */}
           <button
-            onClick={() => navigate("/dashboard/booking")}
-            className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-100 transition-colors shadow-sm"
+            onClick={() => navigate("/dashboards/booking")}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center gap-2"
           >
-            Book New Space
+            <LayoutDashboard size={20} />
+            Book New Session
           </button>
         </header>
 
@@ -336,7 +331,7 @@ const UserDashboard: React.FC = () => {
               session to see your dashboard light up!
             </p>
             <button
-              onClick={() => navigate("/dashboard/booking")}
+              onClick={() => navigate("/dashboards/booking")}
               className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-shadow shadow-lg shadow-blue-200"
             >
               Book a Workspace
