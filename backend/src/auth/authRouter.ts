@@ -17,7 +17,6 @@ router.post("/signup", async (req: Request, res: Response) => {
 
   try {
     const hashedPassword = await bcryptjs.hash(password, 10);
-    // const newId = users.length > 0 ? users[users.length - 1].id + 1 : 1;
 
     const result = await db.query(
       `INSERT INTO users (name, email, password_hash)

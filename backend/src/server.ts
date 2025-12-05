@@ -15,7 +15,7 @@ app.use(express.json());
 
 app.use("/auth", authRouter);
 
-app.use("/api/desks", deskRoutes);
+app.use("/desks", deskRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("API is Running!");
