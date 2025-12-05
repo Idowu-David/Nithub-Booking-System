@@ -59,7 +59,7 @@ const SignUpPage: React.FC = () => {
       };
 
       const response = await axios.post(
-        `${API_BASE_URL}/auth/signup`,
+        `${API_BASE_URL}auth/signup`,
         payload
       );
 
