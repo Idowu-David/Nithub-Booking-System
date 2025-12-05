@@ -219,7 +219,7 @@ const BookingDashboard = () => {
       const endTime = `${endH}:${endM}:00`;
 
       try {
-        const queryUrl = `${API_BASE_URL}/desks`;
+        const queryUrl = `${API_BASE_URL}/api/desks`;
 
         console.log(
           `Checking availability for: ${date} | ${time} - ${endTime}`
