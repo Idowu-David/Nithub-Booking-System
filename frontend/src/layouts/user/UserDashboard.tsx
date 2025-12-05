@@ -1,340 +1,187 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import {
-  MapPin,
-  LogOut,
-  MonitorCheck,
-  Zap,
-  Loader2,
-  Wifi,
-  Calendar,
-  LayoutDashboard, // Added LayoutDashboard for clarity in the header
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Clock, MapPin, LogOut, MonitorCheck, Loader2, RefreshCw, X, LayoutDashboard } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-// --- CONFIGURATION ---
-const API_BASE_URL = "http://localhost:5000/api";
-
-// --- TYPES ---
-interface ActiveBooking {
-  id: number;
-  desk_id: number;
-  desk_label: string;
-  start_time: string; // HH:MM:SS
-  end_time: string; // HH:MM:SS
-  booking_date: string; // YYYY-MM-MM
-  package_duration_mins: number;
-  status: "CONFIRMED" | "CHECKED_OUT" | "CANCELLED";
-}
-
-// Helper for nice time formatting
-const formatTime = (mins: number): string => {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h > 0 && m > 0) return `${h} hr ${m} min`;
-  if (h > 0) return `${h} hr`;
-  return `${m} min`;
+// Helper for converting milliseconds to HH:MM:SS format
+const formatSeconds = (totalSeconds: number): string => {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+  
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
+
+// Define the shape of the data retrieved from storage/backend
+interface SessionData {
+  deskLabel: string;
+  endTimestamp: number;
+  userId: string;
+}
 
 const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
-
+  
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeBooking, setActiveBooking] = useState<ActiveBooking | null>(
-    null
-  );
+  const [session, setSession] = useState<SessionData | null>(null);
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // --- 1. FETCH ACTIVE BOOKING ---
-  const fetchActiveBooking = async () => {
-    setLoading(true);
-    const userId = localStorage.getItem("user_id");
+  // --- 1. FETCH MOCK DATA FROM LOCAL STORAGE ---
+  useEffect(() => {
+    // In a real app, you would fetch this from the backend GET /api/bookings/active/:userId
+    
+    setTimeout(() => { // Simulate network delay
+      const userId = localStorage.getItem("user_id");
+      const deskLabel = localStorage.getItem("desk_id");
+      const endTimestampStr = localStorage.getItem("duration");
 
-    if (!userId) {
-      navigate("/login");
+      if (userId && deskLabel && endTimestampStr) {
+        setSession({
+          userId: userId,
+          deskLabel: deskLabel,
+          endTimestamp: parseInt(endTimestampStr, 10),
+        });
+      }
+      setLoading(false);
+    }, 500);
+  }, []);
+
+
+  // --- 2. LIVE COUNTDOWN TIMER ---
+  useEffect(() => {
+    if (!session || session.endTimestamp <= Date.now()) {
+      setTimeLeft(session ? "EXPIRED" : null);
       return;
     }
 
-    try {
-      // Assuming you have a route GET /bookings/active/:user_id
-      const response = await axios.get(
-        `${API_BASE_URL}/bookings/active/${userId}`
-      );
-
-      if (response.data) {
-        // Assume backend returns desk_label via a JOIN
-        setActiveBooking(response.data);
-      } else {
-        setActiveBooking(null);
-      }
-    } catch (err: any) {
-      console.error("Dashboard Fetch Error:", err);
-      if (err.response && err.response.status === 404) {
-        setActiveBooking(null);
-      } else {
-        setError("Could not load booking details.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActiveBooking();
-  }, []);
-
-  // --- 2. COUNTDOWN TIMER LOGIC ---
-  useEffect(() => {
-    if (!activeBooking) return;
-
-    const targetTime = new Date(
-      `${activeBooking.booking_date}T${activeBooking.end_time}`
-    );
-
     const interval = setInterval(() => {
-      const now = new Date();
-      const difference = targetTime.getTime() - now.getTime();
+      const now = Date.now();
+      const difference = session.endTimestamp - now;
 
       if (difference <= 0) {
         setTimeLeft("EXPIRED");
         clearInterval(interval);
       } else {
-        const h = Math.floor((difference / (1000 * 60 * 60)) % 24);
-        const m = Math.floor((difference / 1000 / 60) % 60);
-        const s = Math.floor((difference / 1000) % 60);
-
-        setTimeLeft(
-          `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s
-            .toString()
-            .padStart(2, "0")}`
-        );
+        setTimeLeft(formatSeconds(Math.floor(difference / 1000)));
       }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [activeBooking]);
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [session]);
+
 
   // --- 3. CHECKOUT HANDLER ---
   const handleCheckout = async () => {
-    if (!activeBooking) return;
-    if (!window.confirm(`Are you sure you want to end your session early?`))
-      return;
-
-    const userId = localStorage.getItem("user_id");
-    if (!userId) return;
+    if (!session || !window.confirm(`Are you sure you want to end your session at ${session.deskLabel}?`)) return;
 
     setIsCheckingOut(true);
+    
     try {
-      const payload = {
-        user_id: userId,
-        desk_id: activeBooking.desk_id,
-      };
-
-      // Assuming route is POST /api/bookings/checkout
-      await axios.post(`${API_BASE_URL}/bookings/checkout`, payload);
-
-      setActiveBooking(null);
-      setTimeLeft(null);
-      alert("Checked out successfully!");
+      // In a real app, this sends a POST to /api/bookings/checkout
+      console.log(`Sending checkout signal for User ${session.userId} at ${session.deskLabel}`);
+      
+      // Clear localStorage items simulating successful checkout and redirection
+      localStorage.removeItem("desk_id");
+      // localStorage.removeItem("end_timestamp");
+      
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API call time
+      
+      setSession(null); // Clear session state
+      navigate('/dashboard'); // Redirect back to booking screen
+      
     } catch (err: any) {
-      console.error("Checkout failed", err);
-      alert(
-        err.response?.data?.message || "Failed to check out. Please try again."
-      );
+      setError("Checkout failed: Server error.");
     } finally {
       setIsCheckingOut(false);
     }
   };
 
-  // --- LOADING STATE ---
+  // --- RENDERING STATES ---
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">Loading Dashboard...</p>
-        </div>
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900">
-              My Dashboard
-            </h1>
-            <p className="text-slate-500">Welcome back.</p>
-          </div>
-
-          {/* USER NAVIGATION BUTTON (The required link) */}
-          <button
-            onClick={() => navigate("/dashboards/booking")}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center gap-2"
-          >
-            <LayoutDashboard size={20} />
-            Book New Session
-          </button>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex justify-center">
+      <div className="w-full max-w-xl">
+        
+        <header className="text-center mb-10 pt-4">
+          <h1 className="text-3xl font-extrabold text-slate-900">My Workspace</h1>
+          <p className="text-slate-500 mt-1">Status: Logged in as User ID: {session?.userId || 'N/A'}</p>
         </header>
-
+        
+        {/* Error Display */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg">
-            <p className="text-red-700">{error}</p>
+          <div className="bg-red-100 border border-red-400 p-3 mb-4 rounded-xl text-red-700 text-sm">
+            {error}
           </div>
         )}
 
-        {/* MAIN CONTENT AREA */}
-        {activeBooking ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* LEFT: HERO STATUS CARD */}
-            <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              {/* Status Bar */}
-              <div className="bg-blue-600 px-8 py-4 flex justify-between items-center text-white">
-                <div className="flex items-center gap-2 font-bold tracking-wide text-sm uppercase">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-200 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                  </span>
-                  Active Session
+        {/* --- ACTIVE BOOKING DISPLAY --- */}
+        {session ? (
+          <div className="bg-white rounded-3xl shadow-2xl border border-blue-200 overflow-hidden">
+            
+            {/* Status Header */}
+            <div className="bg-blue-600 px-8 py-4 text-white flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <MonitorCheck size={24} />
+                    <span className="text-xl font-bold">{session.deskLabel}</span>
                 </div>
-                <div className="flex items-center gap-2 opacity-90 text-sm">
-                  <Calendar size={16} /> {activeBooking.booking_date}
-                </div>
-              </div>
-
-              <div className="p-8 md:p-10">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-                  <div>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-wider mb-2">
-                      Current Workspace
-                    </p>
-                    {/* Display Real Desk ID/Label */}
-                    <h2 className="text-4xl font-black text-slate-800">
-                      {activeBooking.desk_label ||
-                        `Desk ${activeBooking.desk_id}`}
-                    </h2>
-                    <div className="flex items-center gap-2 text-slate-500 mt-2 font-medium">
-                      <MapPin size={18} className="text-blue-500" />
-                      <span>Floor 2, Central Hub</span>
-                    </div>
-                  </div>
-
-                  {/* Timer Display */}
-                  <div className="bg-slate-900 rounded-2xl p-6 text-center shadow-lg min-w-[200px]">
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">
-                      Time Remaining
-                    </p>
-                    <div
-                      className={`text-4xl font-mono font-bold ${
-                        timeLeft === "EXPIRED"
-                          ? "text-red-500"
-                          : "text-emerald-400"
-                      }`}
-                    >
-                      {timeLeft || "--:--:--"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-slate-100">
-                  <button
-                    onClick={handleCheckout}
-                    disabled={isCheckingOut}
-                    className="flex-1 py-3.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 border border-red-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {isCheckingOut ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <LogOut size={20} />
-                    )}
-                    Check Out Now
-                  </button>
-                  <button className="flex-1 py-3.5 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-slate-100 border border-slate-200 transition-colors">
-                    Report Issue
-                  </button>
-                </div>
-              </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${timeLeft === 'EXPIRED' ? 'bg-red-400' : 'bg-emerald-400'}`}>
+                    {timeLeft === 'EXPIRED' ? 'SESSION ENDED' : 'LIVE'}
+                </span>
             </div>
 
-            {/* RIGHT: INFO CARDS */}
-            <div className="space-y-6">
-              {/* Package Info */}
-              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="bg-amber-100 p-3 rounded-full text-amber-600">
-                    <Zap size={24} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 font-bold uppercase">
-                      Package
-                    </p>
-                    <p className="font-bold text-slate-800 text-lg">
-                      {/* Approximate duration based on start/end */}
-                      {activeBooking.package_duration_mins
-                        ? formatTime(activeBooking.package_duration_mins)
-                        : "Custom"}{" "}
-                      Access
-                    </p>
-                  </div>
+            {/* Content & Timer */}
+            <div className="p-8">
+              
+              {/* Timer Block */}
+              <div className="bg-slate-900 rounded-xl p-6 text-center mb-6">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Time Remaining</p>
+                <div className={`text-5xl font-mono font-extrabold ${timeLeft === 'EXPIRED' ? 'text-red-500' : 'text-emerald-400'} flex items-center justify-center gap-3`}>
+                    <Clock size={32} className={timeLeft !== 'EXPIRED' ? 'animate-pulse' : ''} />
+                    {timeLeft || "00:00:00"}
                 </div>
-                <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 flex justify-between">
-                  <span>Start</span>
-                  <span className="font-mono font-bold">
-                    {activeBooking.start_time?.slice(0, 5)}
-                  </span>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-600 flex justify-between mt-2">
-                  <span>End</span>
-                  <span className="font-mono font-bold">
-                    {activeBooking.end_time?.slice(0, 5)}
-                  </span>
-                </div>
+                <p className="text-slate-500 text-xs mt-3 flex items-center justify-center gap-1">
+                    <MapPin size={14} className='text-blue-500'/> Central Zone, ID: {session.userId}
+                </p>
               </div>
 
-              {/* Wi-Fi Info */}
-              <div className="bg-indigo-600 p-6 rounded-3xl shadow-lg shadow-indigo-200 text-white">
-                <div className="flex items-start justify-between mb-6">
-                  <div>
-                    <p className="text-indigo-200 text-xs font-bold uppercase mb-1">
-                      Wi-Fi Network
-                    </p>
-                    <h3 className="text-xl font-bold">NitHub_Guest</h3>
-                  </div>
-                  <Wifi className="text-indigo-300" />
-                </div>
-                <div className="bg-indigo-500/50 p-3 rounded-xl backdrop-blur-sm border border-indigo-400/30">
-                  <p className="text-xs text-indigo-200 mb-1">Password</p>
-                  <p className="font-mono font-bold tracking-wider">
-                    FastNet2025
-                  </p>
-                </div>
-              </div>
+              {/* Action Button */}
+              <button
+                onClick={handleCheckout}
+                disabled={isCheckingOut || timeLeft === 'EXPIRED'}
+                className="w-full py-3.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {isCheckingOut ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <LogOut size={20} />
+                )}
+                {isCheckingOut ? 'Processing Checkout...' : 'Check Out Now'}
+              </button>
             </div>
           </div>
         ) : (
-          /* EMPTY STATE */
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200 text-center">
-            <div className="bg-slate-50 p-6 rounded-full mb-6">
-              <MonitorCheck className="w-12 h-12 text-slate-300" />
+          /* --- NO ACTIVE BOOKING STATE --- */
+          <div className="bg-white rounded-xl shadow-lg p-10 text-center border-2 border-dashed border-gray-200 mt-12">
+            <div className="bg-slate-50 p-6 rounded-full mb-6 mx-auto w-fit">
+              <X className="w-8 h-8 text-red-400" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">
-              No Active Booking
-            </h2>
-            <p className="text-slate-500 max-w-md mb-8">
-              You are not currently checked into any workspace. Start a new
-              session to see your dashboard light up!
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">No Active Session</h2>
+            <p className="text-gray-500 mb-8">
+              Click below to reserve your space and view your real-time status here.
             </p>
             <button
-              onClick={() => navigate("/dashboards/booking")}
-              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-shadow shadow-lg shadow-blue-200"
+              onClick={() => navigate('/dashboards/booking')} 
+              className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg"
             >
-              Book a Workspace
+              Start New Booking
             </button>
           </div>
         )}

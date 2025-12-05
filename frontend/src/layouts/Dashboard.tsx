@@ -66,7 +66,6 @@ const TIME_SLOTS = [
   "16:30",
 ];
 
-
 const PACKAGES: Package[] = [
   { id: 1, label: "30 Mins", mins: 30, price: 500, popular: false },
   { id: 2, label: "1 Hour", mins: 60, price: 1000, popular: true },
@@ -286,8 +285,8 @@ const BookingDashboard = () => {
     if (!selectedTime || !selectedDesk) return;
 
     // 1. Get User ID from Local Storage (Ensure you saved this during Login!)
-		const userId = localStorage.getItem("user_id");		
-		console.log("USERID:", userId)
+    const userId = localStorage.getItem("user_id");
+    console.log("USERID:", userId);
 
     if (!userId) {
       alert("You must be logged in to book a desk.");
@@ -305,6 +304,7 @@ const BookingDashboard = () => {
     };
 
     console.log("Booking Payload Sent to Backend:", bookingPayload);
+    localStorage.setItem("duration", String(bookingData.mins));
 
     try {
       // 2. SEND THE REQUEST TO YOUR BACKEND
