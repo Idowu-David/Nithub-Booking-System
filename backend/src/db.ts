@@ -21,7 +21,7 @@ const connectionConfig = isProduction
   ? {
       connectionString: connectionString,
       // Render requires SSL to be explicitly set to reject unauthorized for secure connection
-      ssl: { rejectUnauthorized: false },
+      ssl: isProduction ? { rejectUnauthorized: false } : false,
     }
   : {
       user: process.env.DB_USER,
