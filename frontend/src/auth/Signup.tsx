@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, Check, CheckCircle } from "lucide-react";
 import axios from "axios";
 
+// --- CONFIGURATION ---
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 // Define the shape of the user input data
 interface FormData {
   username: string;
@@ -48,8 +51,6 @@ const SignUpPage: React.FC = () => {
       return;
     }
 
-   
-
     try {
       const payload = {
         username: formData.username,
@@ -58,7 +59,7 @@ const SignUpPage: React.FC = () => {
       };
 
       const response = await axios.post(
-        "http://localhost:5000/auth/signup",
+        `${API_BASE_URL}/auth/signup`,
         payload
       );
 

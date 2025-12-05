@@ -4,6 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Check } from "lucide-react"; // Added icons for polish
 import axios from "axios";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 // Define the shape of the user input data
 interface LoginFormData {
   email: string;
@@ -52,7 +54,7 @@ const Login: React.FC = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/auth/login",
+       `${API_BASE_URL}/auth/login`,
         formData,
         {
           headers: { "Content-Type": "application/json" },
