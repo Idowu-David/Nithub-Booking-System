@@ -309,7 +309,7 @@ const BookingDashboard = () => {
     try {
       // 2. SEND THE REQUEST TO YOUR BACKEND
       // This hits the createBooking controller you wrote
-      await axios.post(`${API_BASE_URL}/desks/booking`, bookingPayload);
+      await axios.post(`${API_BASE_URL}/api/desks/booking`, bookingPayload);
 
       // 3. IF SUCCESSFUL:
       closeModal();
